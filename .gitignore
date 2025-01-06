@@ -1,0 +1,15 @@
+# Direktori dan file build
+build/
+
+# File log
+log.txt
+
+# Direktori cache
+cache/
+
+# File OS tertentu
+*.pyc
+*.pyo
+*.log
+.DS_Store
+Thumbs.db
