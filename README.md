@@ -15,6 +15,7 @@ This project is to analyze the application of number theory in the gacha system 
 | Event Banner |
 | Hard Pity |
 | Soft Pity |
+| Reset |
 
 ## How to Run
 > [!NOTE]
