@@ -1,8 +1,10 @@
-﻿# Define a character
+﻿# define a character
 define b = Character("Bob")
 
-# Define image
+# define image
 image bg room = im.Scale("bg room.jpeg", config.screen_width, config.screen_height)
+image BlinkL = "blinkl.png"
+image BlinkR = "blinkr.png"
 image Abyssal_Mark = "memories/Abyssal_Mark.png"
 image Floof_Attack = "memories/Floof_Attack.png"
 image Fluffy_Treatment = "memories/Fluffy_Treatment.png"
@@ -62,36 +64,60 @@ transform custom2:
     xsize 600
     ysize 800
 
+transform custom3l:
+    yalign 0.5
+    xalign 0
+    xsize 750
+    ysize 1200
+    # alpha 0.3
+
+transform custom3r:
+    yalign 0.5
+    xalign 0.99
+    xsize 750
+    ysize 1200
+    # alpha 0.3
+
 transform memory_zoom:
     yalign 0.5
     xalign 0.5
     zoom 0.5
     linear 0.5 zoom 1.0
 
+transform memory_zoom2:
+    zoom 0.5
+    linear 0.5 zoom 1.0
+    repeat 1
+        linear 0.5 alpha 0.5
+        linear 0.5 alpha 1.0
+    linear 0.5 alpha 0.0
 
 init python:
     import random
     from collections import defaultdict
     import time
 
-    # Define gacha system
+    # define gacha system
     class GachaSystem:
         def __init__(self, initial_coins):
-            # PRNG Parameters
+            # PRNG parameters
             self.a = 1664525
             self.c = 1013904223
-            self.m = 2**32  # Large prime modulus
-            self.seed = int(time.time() * 1000) % self.m  # Initial seed
+            self.m = 2**32  # large prime modulus
+            self.seed = int(time.time() * 1000) % self.m  # initial seed
             self.coins = initial_coins
             self.cost_per_pull = 150
             self.normal_pity_count = 0
             self.event_pity_count = 0
-            self.event_soft_pity_count = 0
-            self.pity_threshold = 30
+            self.guarantee_pity_count = 0
+            self.soft_pity_bonus = 0
+            self.soft_pity_increment = 0.5
+            self.soft_pity_start = 30
+            self.pity_threshold = 49
             self.tier_probabilities = {
-                "Five-star": {"event": 2, "normal": 3},  # 2% event, 3% normal Five-star
+                "Five-star": {"event": 1, "normal": 2},  # 2% event, 2% normal Five-star
                 "Four-star": 15,
-                "Three-star": 80,
+                "Three-star": 82,
             }
 
             self.memories_by_tier = {
@@ -153,11 +179,11 @@ init python:
         def deduct_coins(self, pulls):
             self.coins -= pulls * self.cost_per_pull
 
-        def get_card_tier(self, card_name):
-            for tier, cards in self.memories_by_tier.items():
-                if card_name in cards:
+        def get_memory_tier(self, memory_name):
+            for tier, memories in self.memories_by_tier.items():
+                if memory_name in memories:
                     return tier
-            if card_name in self.event_memory:
+            if memory_name in self.event_memory:
                 return "Event (Five-star)"
             return "Unknown"
 
@@ -177,69 +203,78 @@ init python:
         def draw_single(self, banner):
             pity_count = self.normal_pity_count if banner == "normal" else self.event_pity_count
 
-            if pity_count >= self.pity_threshold:
+            # soft pity logic
+            if banner == "event" and pity_count >= self.soft_pity_start:
+                additional_probability = (pity_count - self.soft_pity_start) * self.soft_pity_increment
+                effective_five_star_probability = min(
+                    self.tier_probabilities["Five-star"]["event"] + additional_probability,
+                    100
+                )
+            else:
+                effective_five_star_probability = self.tier_probabilities["Five-star"]["event"]
+
+            # hard pity logic
+            if pity_count >= self.pity_threshold or self.guarantee_pity_count % 2 == 0:
                 if banner == "normal":
                     self.normal_pity_count = 0
                     return random.choice(self.memories_by_tier["Five-star"])
                 elif banner == "event":
                     self.event_pity_count = 0
-                    self.event_soft_pity_count += 1  # Increment event pity counter
+                    self.guarantee_pity_count += 1 
 
-                    # Soft pity logic for event banner
-                    if self.event_soft_pity_count == 2:  # Even soft pity: guarantee event memory
-                        self.event_soft_pity_count = 0  # Reset event soft pity
+                    # guarantee event memory every second pity
+                    if self.guarantee_pity_count % 2 == 0: 
+                        self.guarantee_pity_count = 0 
                         return random.choice(self.event_memory)
-                    else:  # Odd soft pity: random Five-star
+                    else: 
                         return random.choice(self.memories_by_tier["Five-star"] + [self.event_memory])
 
-            rand_num = self.prng() * 100  # Scale to [0, 100)
+            # random selection logic
+            rand_num = self.prng() * 100  # scale to [0, 100)
             cumulative = 0
             selected_tier = None
 
             for tier, probability in self.tier_probabilities.items():
                 if isinstance(probability, dict):
-                    probability = sum(probability.values())
+                    probability = (
+                        effective_five_star_probability
+                        if tier == "Five-star" and banner == "event"
+                        else probability[banner]
+                    )
                 cumulative += probability
                 if rand_num < cumulative:
                     selected_tier = tier
                     break
 
-            if isinstance(self.tier_probabilities[selected_tier], dict):
-                tier_probability = self.tier_probabilities[selected_tier][banner]
-            else:
-                tier_probability = self.tier_probabilities[selected_tier]
+            if selected_tier is None:
+                return "Error: No tier selected"
 
+            # select memory
             memories = self.memories_by_tier[selected_tier]
-            # tier_probability = self.tier_probabilities[selected_tier]
-            total_memories = len(memories)
+            selected_memory = random.choice(memories)
 
-            per_memory_probability = tier_probability / total_memories
-            probabilities = {memory: per_memory_probability for memory in memories}
+            # pity counters
+            if selected_tier == "Five-star":
+                if banner == "normal":
+                    self.normal_pity_count = 0
+                elif banner == "event":
+                    self.event_pity_count = 0
+                    if selected_memory not in self.event_memory:
+                        self.guarantee_pity_count += 1
+            else:
+                if banner == "normal":
+                    self.normal_pity_count += 1
+                elif banner == "event":
+                    self.event_pity_count += 1
 
-            rand_num = self.prng() * tier_probability
-            cumulative = 0
+            return selected_memory
 
-            for memory, probability in probabilities.items():
-                cumulative += probability
-                if rand_num < cumulative:
-                    if selected_tier == "Five-star":
-                        if banner == "normal":
-                            self.normal_pity_count = 0  # Reset normal pity if Five-star drawn
-                        elif banner == "event" and memory == self.event_memory:
-                            self.event_pity_count = 0  # Reset event pity if event memory drawn
-                    else:
-                        if banner == "normal":
-                            self.normal_pity_count += 1
-                        elif banner == "event":
-                            self.event_pity_count += 1
-                    return memory
 
-            return "Error"
-
-    # Create a global gacha system instance
     gacha = GachaSystem(initial_coins=3000)
     results = defaultdict(int)
     obtained_memories = defaultdict(int)
+    blinkr = "BlinkR"
+    blinkl = "BlinkL"
     memory_images = {
         "Abyssal Mark": "Abyssal_Mark",
         "Floof Attack": "Floof_Attack",
@@ -289,13 +324,12 @@ init python:
         "Thoughts": "Thoughts"
     }
 
-# The game starts here.
 
+# The game starts here.
 label start:
     scene bg room
     show chicken at custom
 
-    # These display lines of dialogue.
     b "Oh, hello there!"
     b "I'm Bob, the chicken."
     b "I'm here to guide you through this game."
@@ -313,7 +347,7 @@ label start:
     b "With the Event Banner, you can get a special memory that is only available during the event. While with the Normal Banner, you can get a memory that is always available."
     b "There is also a tier system for the memorys. The higher the tier, the better the memory. But of course, the higher the tier, the lower the chance to get it."
 
-    call bannerType
+    call bannerType from _call_bannerType
     return
 
 label bannerType:  
@@ -355,7 +389,7 @@ label normal:
 
     $ banner = "normal"
 
-    call menu
+    call menu from _call_menu
     return
 
 label event:
@@ -366,7 +400,7 @@ label event:
 
     $ banner = "event"
 
-    call menu
+    call menu from _call_menu_1
     return
 
 label pull:
@@ -378,37 +412,40 @@ label pull:
                     renpy.say(None, result)
                     break
                 obtained_memories[result] += 1
-                memory_tier = gacha.get_card_tier(result)
+                memory_tier = gacha.get_memory_tier(result)
 
                 if result in memory_images:
-                    renpy.show(memory_images[result], at_list=(custom2, memory_zoom))
-                    renpy.say(None, f"You got a {memory_tier} memory: {result}!")
-                    renpy.pause(1.5)
-                    renpy.hide(memory_images[result])
-
-
-                # renpy.say(None, f"You got a {memory_tier} memory: {result}!")
-                # if result in memory_images:
-                #     renpy.show(memory_images[result], at_list=(custom2, memory_zoom))
-                #     renpy.pause(3)
-                #     renpy.hide(memory_images[result])
+                    if memory_tier == "Five-star":
+                        renpy.show(memory_images[result], at_list=(custom2, memory_zoom))
+                        renpy.show(blinkr, at_list=(custom3r, memory_zoom2))
+                        renpy.show(blinkl, at_list=(custom3l, memory_zoom2))
+                        if result in gacha.event_memory:
+                            renpy.say(None, f"You got a {memory_tier} memory: {result}! (Event Memory)")
+                        else:
+                            renpy.say(None, f"You got a {memory_tier} memory: {result}!")
+                        renpy.hide(blinkr)
+                        renpy.hide(blinkl)
+                        renpy.hide(memory_images[result])
+                    else:
+                        renpy.show(memory_images[result], at_list=(custom2, memory_zoom))
+                        renpy.say(None, f"You got a {memory_tier} memory: {result}!")
+                        renpy.hide(memory_images[result])
             renpy.say(None, f"You now have {gacha.coins} diamonds remaining.")
     else:
         "You do not have enough diamonds to pull."
-        call coin    
+        call coin from _call_coin    
 
-    call menu
+    call menu from _call_menu_2
     return
 
 label show_pity:
     show chicken at custom
-
     if banner == "normal":
-        b "Normal Banner: [gacha.normal_pity_count]/[gacha.pity_threshold]"
+        b "Normal Banner: [gacha.normal_pity_count]/[gacha.pity_threshold+1]"
     elif banner == "event":
-        b "Event Banner: [gacha.event_pity_count]/[gacha.pity_threshold] (Soft Pity Count: [gacha.event_soft_pity_count])"
+        b "Event Banner: [gacha.event_pity_count]/[gacha.pity_threshold+1] (Guarantee Pity Count: [gacha.guarantee_pity_count])"
 
-    call menu
+    call menu from _call_menu_3
     return
 
 label coin:
