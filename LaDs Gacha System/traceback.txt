@@ -1,0 +1,36 @@
+﻿I'm sorry, but an uncaught exception occurred.
+
+While running game code:
+  File "game/script.rpy", line 315, in script call
+    call bannerType
+  File "game/script.rpy", line 368, in script call
+    call menu
+  File "game/script.rpy", line 373, in script
+    python:
+  File "game/script.rpy", line 384, in <module>
+    renpy.show(renpy.say(None, f"You got a {memory_tier} memory: {result}!"))
+AttributeError: 'NoneType' object has no attribute 'split'
+
+-- Full Traceback ------------------------------------------------------------
+
+Full traceback:
+  File "game/script.rpy", line 315, in script call
+    call bannerType
+  File "game/script.rpy", line 368, in script call
+    call menu
+  File "game/script.rpy", line 373, in script
+    python:
+  File "E:\renpy-8.3.4-sdk\renpy\ast.py", line 827, in execute
+    renpy.python.py_exec_bytecode(self.code.bytecode, self.hide, store=self.store)
+  File "E:\renpy-8.3.4-sdk\renpy\python.py", line 1178, in py_exec_bytecode
+    exec(bytecode, globals, locals)
+  File "game/script.rpy", line 384, in <module>
+    renpy.show(renpy.say(None, f"You got a {memory_tier} memory: {result}!"))
+  File "E:\renpy-8.3.4-sdk\renpy\exports\displayexports.py", line 442, in show
+    name = tuple(name.split())
+AttributeError: 'NoneType' object has no attribute 'split'
+
+Windows-10-10.0.19045 AMD64
+Ren'Py 8.3.4.24120703
+LaDs Gacha System 1.0
+Mon Jan  6 09:53:40 2025

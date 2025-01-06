@@ -1,0 +1,10 @@
+﻿I'm sorry, but errors were detected in your script. Please correct the
+errors listed below, and try again.
+
+
+File "game/script.rpy", line 350: invalid syntax
+            show expression memory_images[result] at memory_zoom
+                  ^
+
+Ren'Py Version: Ren'Py 8.3.4.24120703
+Mon Jan  6 09:14:14 2025
