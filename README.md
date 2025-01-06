@@ -13,8 +13,9 @@ This project is to analyze the application of number theory in the gacha system 
 |-------|
 | Normal Banner |
 | Event Banner |
-| Normal gacha |
-| Gacha w/ soft pity |
+| Pity |
+| Soft Pity |
+| Reset |
 
 ## How to Use
 1. Git clone this repository:
