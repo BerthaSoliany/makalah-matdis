@@ -1,4 +1,4 @@
-﻿# define a character
+# define a character
 define b = Character("Bob")
 
 # define image
@@ -112,12 +112,12 @@ init python:
             self.guarantee_pity_count = 0
             self.soft_pity_bonus = 0
             self.soft_pity_increment = 0.5
-            self.soft_pity_start = 30
-            self.pity_threshold = 49
+            self.soft_pity_start = 50
+            self.pity_threshold = 70
             self.tier_probabilities = {
-                "Five-star": {"event": 1, "normal": 2},  # 2% event, 2% normal Five-star
-                "Four-star": 15,
-                "Three-star": 82,
+                "Five-star": {"event": 1, "normal": 1},
+                "Four-star": 6,
+                "Three-star": 92,
             }
 
             self.memories_by_tier = {
@@ -166,7 +166,17 @@ init python:
                 ],
             }
 
-            self.event_memory = ["Abyssal Mark", "Floof Attack", "Fluffy Treatment", "Goodcat Code", "Seething Flames", "Snowfall Encounter", "Temple Promise", "Tender Night", "Unforgettable Adventure"]
+            self.event_memory = [
+                "Abyssal Mark",
+                "Floof Attack",
+                "Fluffy Treatment",
+                "Goodcat Code",
+                "Seething Flames",
+                "Snowfall Encounter",
+                "Temple Promise",
+                "Tender Night",
+                "Unforgettable Adventure"
+            ]
 
 
         def prng(self):
@@ -194,9 +204,29 @@ init python:
 
             self.deduct_coins(pulls)
             results = []
+            four_star_obtained = False
+            five_star_obtained = False
+
             for _ in range(pulls):
                 result = self.draw_single(banner=banner)
                 results.append(result)
+                if self.get_memory_tier(result) == "Four-star":
+                    four_star_obtained = True
+                if self.get_memory_tier(result) == "Five-star":
+                    five_star_obtained = True
+
+            if pulls == 10 and not four_star_obtained and not five_star_obtained:
+                index = int(self.prng() * len(results))
+                if self.get_memory_tier(results[index]) == "Three-star":
+                    four_star_memories = self.memories_by_tier["Four-star"]
+                    results[index] = four_star_memories[int(self.prng() * len(four_star_memories))]
+                else:
+                    for i, result in enumerate(results):
+                        if self.get_memory_tier(result) == "Three-star":
+                            four_star_memories = self.memories_by_tier["Four-star"]
+                            results[i] = four_star_memories[int(self.prng() * len(four_star_memories))]
+                            break
+
             return results
 
 
@@ -214,20 +244,21 @@ init python:
                 effective_five_star_probability = self.tier_probabilities["Five-star"]["event"]
 
             # hard pity logic
-            if pity_count >= self.pity_threshold or self.guarantee_pity_count % 2 == 0:
+            if pity_count >= self.pity_threshold or self.guarantee_pity_count == 2:
                 if banner == "normal":
                     self.normal_pity_count = 0
-                    return random.choice(self.memories_by_tier["Five-star"])
+                    return self.memories_by_tier["Five-star"][int(self.prng() * len(self.memories_by_tier["Five-star"]))]
                 elif banner == "event":
                     self.event_pity_count = 0
                     self.guarantee_pity_count += 1 
 
                     # guarantee event memory every second pity
-                    if self.guarantee_pity_count % 2 == 0: 
+                    if self.guarantee_pity_count == 2: 
                         self.guarantee_pity_count = 0 
-                        return random.choice(self.event_memory)
+                        return self.event_memory[int(self.prng() * len(self.event_memory))]
                     else: 
-                        return random.choice(self.memories_by_tier["Five-star"] + [self.event_memory])
+                        all_memories = self.memories_by_tier["Five-star"] + [self.event_memory]
+                        return all_memories[int(self.prng() * len(all_memories))]
 
             # random selection logic
             rand_num = self.prng() * 100  # scale to [0, 100)
@@ -251,7 +282,7 @@ init python:
 
             # select memory
             memories = self.memories_by_tier[selected_tier]
-            selected_memory = random.choice(memories)
+            selected_memory = memories[int(self.prng() * len(memories))]
 
             # pity counters
             if selected_tier == "Five-star":
@@ -330,7 +361,7 @@ label start:
     scene bg room
     show chicken at custom
 
-    b "Oh, hello there!"
+    b "Oh, hi there!"
     b "I'm Bob, the chicken."
     b "I'm here to guide you through this game."
     b "Well, I say 'game', but it's more of a demo."
@@ -339,13 +370,23 @@ label start:
     b "This demo is for studying purposes and it is for you to enjoy the beauty of gacha games."
     b "The title for my paper is 'The Mathematics of Luck: Number Theory in the Gacha System of Love and DeepSpace'."
     b "Yes, as you can see, I'm using Love and Deepspace gacha system as a case study for my paper. Because of that, in this demo, you will be able to try the gacha system of Love and Deepspace."
-    b "FYI, I use number theory to simulated it."
-    b "You can get a memory by spending a certain amount of diamonds. The currency is called 'diamonds' and cards are called 'memories'."
+    b "In this demo, you will be able to pull memories from the gacha system of Love and Deepspace."
+    b "You can get a memory by spending a certain amount of diamonds. The currency is called 'Diamonds' and cards are called 'Memories'."
     b "In this demo, you can get one memory by spending 150 diamonds or 1500 for ten memories."
     b "I will give you 3000 diamonds to start with."
-    b "Now, what type of memory banner you want to try? Normal or Event?"
+
+    b "There is a tier system for the memories."
+    b "The memories are divided into three tiers: Five-star, Four-star, and Three-star. The Five-star memories are the rarest and the Three-star memories are the most common."
+    b "The higher the tier, the better the memory. But of course, the higher the tier, the lower the chance to get it."
+
+    b "There are pity system. Soft pity and hard pity. Soft pity is when you get a higher chance to get a five-star memory when you reach a certain number of pulls. While hard pity is when you are guaranteed to get a five-star memory after a certain number of pulls."
+    b "The pity system is different for the Normal and Event Banner. For the Event Banner, you are guaranteed to get an event memory every second pity."
+    b "Also, if you pull ten times, you are guaranteed to get a four-star memory."
+
+    b "FYI, I use number theory to simulated it."
+    b "Now, let's start the game!"
+    b "What type of memory banner you want to try? Normal or Event?"
     b "With the Event Banner, you can get a special memory that is only available during the event. While with the Normal Banner, you can get a memory that is always available."
-    b "There is also a tier system for the memorys. The higher the tier, the better the memory. But of course, the higher the tier, the lower the chance to get it."
 
     call bannerType from _call_bannerType
     return
@@ -441,9 +482,9 @@ label pull:
 label show_pity:
     show chicken at custom
     if banner == "normal":
-        b "Normal Banner: [gacha.normal_pity_count]/[gacha.pity_threshold+1]"
+        b "Normal Banner: [gacha.normal_pity_count]/[gacha.pity_threshold]"
     elif banner == "event":
-        b "Event Banner: [gacha.event_pity_count]/[gacha.pity_threshold+1] (Guarantee Pity Count: [gacha.guarantee_pity_count])"
+        b "Event Banner: [gacha.event_pity_count]/[gacha.pity_threshold] (Guarantee Pity Count: [gacha.guarantee_pity_count])"
 
     call menu from _call_menu_3
     return
