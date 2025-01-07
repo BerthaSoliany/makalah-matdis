@@ -111,6 +111,7 @@ init python:
             self.event_pity_count = 0
             self.guarantee_pity_count = 0
             self.soft_pity_bonus = 0
+            # self.previous_non_event = False
             self.soft_pity_increment = 0.5
             self.soft_pity_start = 50
             self.pity_threshold = 70
@@ -206,6 +207,7 @@ init python:
             results = []
             four_star_obtained = False
             five_star_obtained = False
+            event_memory_obtained = False
 
             for _ in range(pulls):
                 result = self.draw_single(banner=banner)
@@ -214,18 +216,47 @@ init python:
                     four_star_obtained = True
                 if self.get_memory_tier(result) == "Five-star":
                     five_star_obtained = True
+                    if banner == "event" and result in self.event_memory and self.previous_non_event:
+                        event_memory_obtained = True
 
             if pulls == 10 and not four_star_obtained and not five_star_obtained:
                 index = int(self.prng() * len(results))
+                four_star_memories = self.memories_by_tier["Four-star"]
                 if self.get_memory_tier(results[index]) == "Three-star":
-                    four_star_memories = self.memories_by_tier["Four-star"]
                     results[index] = four_star_memories[int(self.prng() * len(four_star_memories))]
                 else:
                     for i, result in enumerate(results):
                         if self.get_memory_tier(result) == "Three-star":
-                            four_star_memories = self.memories_by_tier["Four-star"]
                             results[i] = four_star_memories[int(self.prng() * len(four_star_memories))]
                             break
+            
+            # untuk guaranteed five-star event memory ketika g kena threshold
+            # if five_star_obtained and self.previous_non_event and not event_memory_obtained:
+            #     for i, result in enumerate(results):
+            #         if self.get_memory_tier(result) == "Five-star" and result not in self.event_memory:
+            #             results[i] = self.event_memory[int(self.prng() * len(self.event_memory))]
+            #             break
+            #     self.previous_non_event = False
+            
+            # untuk guaranteed five-star ketika pas di 70/70
+            # if not five_star_obtained and self.event_pity_count == self.pity_threshold:
+            #     self.event_pity_count = 0
+            #     index = int(self.prng() * len(results))
+
+            #     if self.previous_non_event:
+            #         five_star_memories = self.event_memory
+            #         self.previous_non_event = False
+            #     else:
+            #         five_star_memories = self.memories_by_tier["Five-star"] + self.event_memory
+            #         self.guarantee_pity_count += 1
+                    
+            #     if self.get_memory_tier(results[index]) == "Three-star":
+            #         results[index] = five_star_memories[int(self.prng() * len(five_star_memories))]
+            #     else:
+            #         for i, result in enumerate(results):
+            #             if self.get_memory_tier(result) == "Three-star":
+            #                 results[i] = five_star_memories[int(self.prng() * len(five_star_memories))]
+            #                 break
 
             return results
 
@@ -242,23 +273,6 @@ init python:
                 )
             else:
                 effective_five_star_probability = self.tier_probabilities["Five-star"]["event"]
-
-            # hard pity logic
-            if pity_count >= self.pity_threshold or self.guarantee_pity_count == 2:
-                if banner == "normal":
-                    self.normal_pity_count = 0
-                    return self.memories_by_tier["Five-star"][int(self.prng() * len(self.memories_by_tier["Five-star"]))]
-                elif banner == "event":
-                    self.event_pity_count = 0
-                    self.guarantee_pity_count += 1 
-
-                    # guarantee event memory every second pity
-                    if self.guarantee_pity_count == 2: 
-                        self.guarantee_pity_count = 0 
-                        return self.event_memory[int(self.prng() * len(self.event_memory))]
-                    else: 
-                        all_memories = self.memories_by_tier["Five-star"] + [self.event_memory]
-                        return all_memories[int(self.prng() * len(all_memories))]
 
             # random selection logic
             rand_num = self.prng() * 100  # scale to [0, 100)
@@ -291,17 +305,35 @@ init python:
                 elif banner == "event":
                     self.event_pity_count = 0
                     if selected_memory not in self.event_memory:
+                        # self.previous_non_event = True
                         self.guarantee_pity_count += 1
+                    else:
+                        self.guarantee_pity_count = 0
             else:
                 if banner == "normal":
                     self.normal_pity_count += 1
                 elif banner == "event":
                     self.event_pity_count += 1
 
+            # hard pity logic
+            if pity_count >= self.pity_threshold or self.guarantee_pity_count == 2 or (self.guarantee_pity_count == 2 and selected_tier == "Five-star"):
+                if banner == "normal":
+                    self.normal_pity_count = 0
+                    return self.memories_by_tier["Five-star"][int(self.prng() * len(self.memories_by_tier["Five-star"]))]
+                elif banner == "event":
+                    self.event_pity_count = 0
+
+                    # guarantee event memory every second pity
+                    if self.guarantee_pity_count == 2: 
+                        self.guarantee_pity_count = 0 
+                        return self.event_memory[int(self.prng() * len(self.event_memory))]
+                    else: 
+                        all_memories = self.memories_by_tier["Five-star"] + [self.event_memory]
+                        return all_memories[int(self.prng() * len(all_memories))]
+
             return selected_memory
 
-
-    gacha = GachaSystem(initial_coins=3000)
+    gacha = GachaSystem(initial_coins=30000000000000000000000)
     results = defaultdict(int)
     obtained_memories = defaultdict(int)
     blinkr = "BlinkR"
@@ -388,7 +420,7 @@ label start:
     b "What type of memory banner you want to try? Normal or Event?"
     b "With the Event Banner, you can get a special memory that is only available during the event. While with the Normal Banner, you can get a memory that is always available."
 
-    call bannerType from _call_bannerType
+    call bannerType
     return
 
 label bannerType:  
@@ -430,7 +462,7 @@ label normal:
 
     $ banner = "normal"
 
-    call menu from _call_menu
+    call menu
     return
 
 label event:
@@ -441,7 +473,7 @@ label event:
 
     $ banner = "event"
 
-    call menu from _call_menu_1
+    call menu
     return
 
 label pull:
@@ -474,9 +506,9 @@ label pull:
             renpy.say(None, f"You now have {gacha.coins} diamonds remaining.")
     else:
         "You do not have enough diamonds to pull."
-        call coin from _call_coin    
+        call coin    
 
-    call menu from _call_menu_2
+    call menu
     return
 
 label show_pity:
@@ -486,7 +518,7 @@ label show_pity:
     elif banner == "event":
         b "Event Banner: [gacha.event_pity_count]/[gacha.pity_threshold] (Guarantee Pity Count: [gacha.guarantee_pity_count])"
 
-    call menu from _call_menu_3
+    call menu
     return
 
 label coin:
@@ -533,6 +565,11 @@ label end:
 label reset_game:
     python:
         gacha.coins = 3000
+        gacha.normal_pity_count = 0
+        gacha.event_pity_count = 0
+        gacha.guarantee_pity_count = 0
+        gacha.soft_pity_bonus = 0
+        # gacha.previous_non_event = False
         obtained_memories.clear()
         
     b "The game has been reset. Enjoy playing again!"
