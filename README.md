@@ -1,4 +1,4 @@
-# The Mathematics of Luck: Number Theory in the Gacha System of Love and DeepSpace
+# The Mathematics of Luck: Number Theory in the Gacha System of Love and Deepspace
 
 ## Table of Content
 1. [About This Project](#about-this-project)
@@ -6,7 +6,7 @@
 3. [How to Use](#how-to-use)
 
 ## About This Project
-This project is to analyze the application of number theory in the gacha system of Love and DeepSpace, focusing on how modular arithmetic and probabilistic models are used to ensure fair and consistent randomness. This project made using Ren'Py to help the user to visualize the real gacha game. 
+This project is to analyze the application of number theory in the gacha system of Love and Deepspace, focusing on how modular arithmetic and probabilistic models are used to ensure fair and consistent randomness. This project made using Ren'Py to help the user to visualize the real gacha game. 
 
 ## Features
 | Features |
