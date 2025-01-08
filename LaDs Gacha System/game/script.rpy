@@ -111,7 +111,7 @@ init python:
             self.event_pity_count = 0
             self.guarantee_pity_count = 0
             self.soft_pity_bonus = 0
-            # self.previous_non_event = False
+            self.previous_non_event = False
             self.soft_pity_increment = 0.5
             self.soft_pity_start = 50
             self.pity_threshold = 70
@@ -195,7 +195,7 @@ init python:
                 if memory_name in memories:
                     return tier
             if memory_name in self.event_memory:
-                return "Event (Five-star)"
+                return "Five-star"
             return "Unknown"
 
 
@@ -219,44 +219,38 @@ init python:
                     if banner == "event" and result in self.event_memory and self.previous_non_event:
                         event_memory_obtained = True
 
-            if pulls == 10 and not four_star_obtained and not five_star_obtained:
-                index = int(self.prng() * len(results))
-                four_star_memories = self.memories_by_tier["Four-star"]
-                if self.get_memory_tier(results[index]) == "Three-star":
-                    results[index] = four_star_memories[int(self.prng() * len(four_star_memories))]
-                else:
-                    for i, result in enumerate(results):
-                        if self.get_memory_tier(result) == "Three-star":
-                            results[i] = four_star_memories[int(self.prng() * len(four_star_memories))]
-                            break
+            # untuk guaranteed four-star every 10 pulls
+            if (pulls == 10 and not four_star_obtained):
+                for i in range(len(results)):
+                    if self.get_memory_tier(results[i]) == "Three-star":
+                        results[i] = self.memories_by_tier["Four-star"][int(self.prng() * len(self.memories_by_tier["Four-star"]))]
+                        break
             
-            # untuk guaranteed five-star event memory ketika g kena threshold
-            # if five_star_obtained and self.previous_non_event and not event_memory_obtained:
-            #     for i, result in enumerate(results):
-            #         if self.get_memory_tier(result) == "Five-star" and result not in self.event_memory:
-            #             results[i] = self.event_memory[int(self.prng() * len(self.event_memory))]
-            #             break
-            #     self.previous_non_event = False
-            
-            # untuk guaranteed five-star ketika pas di 70/70
-            # if not five_star_obtained and self.event_pity_count == self.pity_threshold:
-            #     self.event_pity_count = 0
-            #     index = int(self.prng() * len(results))
+            # untuk guaranteed five-star ketika pas di 70/70 event banner
+            if (self.event_pity_count == self.pity_threshold and not five_star_obtained):
+                self.event_pity_count = 0
+                
 
-            #     if self.previous_non_event:
-            #         five_star_memories = self.event_memory
-            #         self.previous_non_event = False
-            #     else:
-            #         five_star_memories = self.memories_by_tier["Five-star"] + self.event_memory
-            #         self.guarantee_pity_count += 1
+                if self.previous_non_event:
+                    five_star_memories = self.event_memory
+                    self.previous_non_event = False
+                else:
+                    five_star_memories = self.memories_by_tier["Five-star"] + self.event_memory
+                    self.guarantee_pity_count += 1
                     
-            #     if self.get_memory_tier(results[index]) == "Three-star":
-            #         results[index] = five_star_memories[int(self.prng() * len(five_star_memories))]
-            #     else:
-            #         for i, result in enumerate(results):
-            #             if self.get_memory_tier(result) == "Three-star":
-            #                 results[i] = five_star_memories[int(self.prng() * len(five_star_memories))]
-            #                 break
+                for i in range(len(results)):
+                    if self.get_memory_tier(results[i]) == "Three-star":
+                        results[i] = five_star_memories[int(self.prng() * len(five_star_memories))]
+                        break
+            
+            # untuk guaranteed five-star ketika pas di 70/70 normal banner
+            if (self.normal_pity_count == self.pity_threshold and not five_star_obtained):
+                self.normal_pity_count = 0
+
+                for i in range(len(results)):
+                    if self.get_memory_tier(results[i]) == "Three-star":
+                        results[i] = self.memories_by_tier["Five-star"][int(self.prng() * len(self.memories_by_tier["Five-star"]))]
+                        break
 
             return results
 
@@ -298,6 +292,9 @@ init python:
             memories = self.memories_by_tier[selected_tier]
             selected_memory = memories[int(self.prng() * len(memories))]
 
+            if selected_memory is None:
+                return "Error: No memory selected"
+
             # pity counters
             if selected_tier == "Five-star":
                 if banner == "normal":
@@ -305,7 +302,7 @@ init python:
                 elif banner == "event":
                     self.event_pity_count = 0
                     if selected_memory not in self.event_memory:
-                        # self.previous_non_event = True
+                        self.previous_non_event = True
                         self.guarantee_pity_count += 1
                     else:
                         self.guarantee_pity_count = 0
@@ -328,12 +325,13 @@ init python:
                         self.guarantee_pity_count = 0 
                         return self.event_memory[int(self.prng() * len(self.event_memory))]
                     else: 
+                        self.guarantee_pity_count += 1
                         all_memories = self.memories_by_tier["Five-star"] + [self.event_memory]
                         return all_memories[int(self.prng() * len(all_memories))]
 
             return selected_memory
 
-    gacha = GachaSystem(initial_coins=30000000000000000000000)
+    gacha = GachaSystem(initial_coins=15000)
     results = defaultdict(int)
     obtained_memories = defaultdict(int)
     blinkr = "BlinkR"
@@ -396,18 +394,15 @@ label start:
     b "Oh, hi there!"
     b "I'm Bob, the chicken."
     b "I'm here to guide you through this game."
-    b "Well, I say 'game', but it's more of a demo."
-    b "I hope you enjoy it anyway!"
-    b "First, Let's start by explaining this game."
-    b "This demo is for studying purposes and it is for you to enjoy the beauty of gacha games."
-    b "The title for my paper is 'The Mathematics of Luck: Number Theory in the Gacha System of Love and DeepSpace'."
-    b "Yes, as you can see, I'm using Love and Deepspace gacha system as a case study for my paper. Because of that, in this demo, you will be able to try the gacha system of Love and Deepspace."
-    b "In this demo, you will be able to pull memories from the gacha system of Love and Deepspace."
-    b "You can get a memory by spending a certain amount of diamonds. The currency is called 'Diamonds' and cards are called 'Memories'."
-    b "In this demo, you can get one memory by spending 150 diamonds or 1500 for ten memories."
-    b "I will give you 3000 diamonds to start with."
+    b "Well, I say 'game', but it's more of a demo because it's not a full-fledged game and just for studying purposes."
+    b "The title for my paper is 'The Mathematics of Luck: Number Theory in the Gacha System of Love and Deepspace'."
+    b "As you can see, I'm using Love and Deepspace as a case study for my paper. Because of that, in this game, you will be able to try the gacha system of Love and Deepspace."
+    b "First, I'll explain this game."
+    b "In this game, you will be able to pull 'memories' from the gacha."
+    b "You can get a memory by spending a certain amount of diamonds. The currency is called 'Diamonds' and character's cards are called 'Memories'."
+    b "In this game, you can get one memory by spending 150 diamonds or 1500 for ten memories."
+    b "Don't worry, I will give you 15000 diamonds to start with."
 
-    b "There is a tier system for the memories."
     b "The memories are divided into three tiers: Five-star, Four-star, and Three-star. The Five-star memories are the rarest and the Three-star memories are the most common."
     b "The higher the tier, the better the memory. But of course, the higher the tier, the lower the chance to get it."
 
@@ -415,12 +410,13 @@ label start:
     b "The pity system is different for the Normal and Event Banner. For the Event Banner, you are guaranteed to get an event memory every second pity."
     b "Also, if you pull ten times, you are guaranteed to get a four-star memory."
 
-    b "FYI, I use number theory to simulated it."
+    b "I use number theory to simulated the gacha system. You can see the script.rpy for the full code."
+
     b "Now, let's start the game!"
     b "What type of memory banner you want to try? Normal or Event?"
     b "With the Event Banner, you can get a special memory that is only available during the event. While with the Normal Banner, you can get a memory that is always available."
 
-    call bannerType
+    call bannerType from _call_bannerType
     return
 
 label bannerType:  
@@ -462,7 +458,7 @@ label normal:
 
     $ banner = "normal"
 
-    call menu
+    call menu from _call_menu
     return
 
 label event:
@@ -473,7 +469,7 @@ label event:
 
     $ banner = "event"
 
-    call menu
+    call menu from _call_menu_1
     return
 
 label pull:
@@ -492,8 +488,9 @@ label pull:
                         renpy.show(memory_images[result], at_list=(custom2, memory_zoom))
                         renpy.show(blinkr, at_list=(custom3r, memory_zoom2))
                         renpy.show(blinkl, at_list=(custom3l, memory_zoom2))
+                        
                         if result in gacha.event_memory:
-                            renpy.say(None, f"You got a {memory_tier} memory: {result}! (Event Memory)")
+                            renpy.say(None, f"You got Event {memory_tier} memory: {result}!")
                         else:
                             renpy.say(None, f"You got a {memory_tier} memory: {result}!")
                         renpy.hide(blinkr)
@@ -506,9 +503,9 @@ label pull:
             renpy.say(None, f"You now have {gacha.coins} diamonds remaining.")
     else:
         "You do not have enough diamonds to pull."
-        call coin    
+        call coin from _call_coin    
 
-    call menu
+    call menu from _call_menu_2
     return
 
 label show_pity:
@@ -518,17 +515,17 @@ label show_pity:
     elif banner == "event":
         b "Event Banner: [gacha.event_pity_count]/[gacha.pity_threshold] (Guarantee Pity Count: [gacha.guarantee_pity_count])"
 
-    call menu
+    call menu from _call_menu_3
     return
 
 label coin:
     show chicken at custom
 
-    b "Do you want to try again? You can get 10000 diamonds for free."
+    b "Do you want to try again? You can get 75000 diamonds for free."
 
     menu:
         "Yes":
-            $ gacha.coins = gacha.coins + 10000
+            $ gacha.coins = gacha.coins + 75000
             return
         "No":
             return
@@ -558,18 +555,18 @@ label end:
         "Restart the game":
             jump reset_game
         "Exit":
-            b "Thank you for playing! See you next time!"
+            b "Thank you for playing! See you on another space!"
             return 
     return
 
 label reset_game:
     python:
-        gacha.coins = 3000
+        gacha.coins = 15000
         gacha.normal_pity_count = 0
         gacha.event_pity_count = 0
         gacha.guarantee_pity_count = 0
         gacha.soft_pity_bonus = 0
-        # gacha.previous_non_event = False
+        gacha.previous_non_event = False
         obtained_memories.clear()
         
     b "The game has been reset. Enjoy playing again!"
