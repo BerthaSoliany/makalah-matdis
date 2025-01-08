@@ -542,9 +542,10 @@ label end:
         else:
             renpy.say(None, "Here are the memories you collected during this demo:")
             for memory, count in obtained_memories.items():
+                memory_tier = gacha.get_memory_tier(memory)
                 if memory in memory_images:
                     renpy.show(memory_images[memory], at_list=(custom2, memory_zoom))
-                    renpy.say(None, f"{memory}: {count} time(s).")
+                    renpy.say(None, f"{memory_tier} memory {memory}: {count} time(s).")
                     renpy.pause(3)
                     renpy.hide(memory_images[memory])
 
